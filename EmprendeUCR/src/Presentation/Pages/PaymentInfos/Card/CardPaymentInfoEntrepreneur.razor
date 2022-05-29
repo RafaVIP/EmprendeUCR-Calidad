@@ -1,0 +1,121 @@
+﻿
+@using Syncfusion.Blazor.Grids
+@using EmprendeUCR.Application.PaymentInfos;
+@using EmprendeUCR.Application.PaymentMethods;
+@using EmprendeUCR.Domain.PaymentInfos.Entities;
+@using EmprendeUCR.Domain.PaymentMethods.Entities;
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.Popups
+
+@inject NavigationManager NavigationManager
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject IPaymentInfoService PaymentInfoService
+@inject ICardPaymentInfoService CardPaymentInfoService
+@inject ICardPaymentMethodService CardPaymentMethodService
+@inject IHasPaymentInfoService HasPaymentInfoService
+@inherits CardPaymentInfoEntrepreneurBase
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+
+<SfGrid ID="CardGrid" @ref="CardPaymentInfoGrid" AllowSorting="true" DataSource="@_cardPaymentInfoList" Toolbar="CardToolbarItems">
+    <GridEditSettings AllowEditing="true" AllowEditOnDblClick="false" AllowDeleting="true"></GridEditSettings>
+    <GridEvents OnToolbarClick="CardToolbarClickHandler" CommandClicked="CardCommandClicked" TValue="CardPaymentInfo"></GridEvents>
+    <GridColumns>
+        <GridColumn Field=@nameof(CardPaymentInfo.Name_Payment_Method) HeaderText="Marca"> </GridColumn>
+        <GridColumn Field=@nameof(CardPaymentInfo.Account_Number) HeaderText="Cuenta IBAN" IsPrimaryKey="true"></GridColumn>
+        <GridColumn HeaderText="Acciones">
+            <GridCommandColumns>
+                <GridCommandColumn Title="Editar" ButtonOption="@(new CommandButtonOptions() { IconCss = " e-icons e-edit", CssClass = "e-flat" })"></GridCommandColumn>
+                <GridCommandColumn Title="Eliminar" ButtonOption="@(new CommandButtonOptions() { IconCss = " e-icons e-delete", CssClass = "e-flat" })"></GridCommandColumn>
+            </GridCommandColumns>
+        </GridColumn>
+    </GridColumns>
+    <GridTemplates>
+        <EmptyRecordTemplate>
+            <span>No existen datos registrados</span>
+        </EmptyRecordTemplate>
+    </GridTemplates>
+</SfGrid>
+
+<SfDialog ID="addCardInfoDialog" IsModal="true" Width="300px" @bind-Visible="@AddCardDialogVisible">
+    <DialogTemplates>
+        <Header>
+            Agregar cuenta IBAN
+        </Header>
+        <Content>
+            <div id='input-container'>
+                <div class="e-float-input e-input-group">
+                    <input id="number" type="number" @bind="@AddedCardIban" required />
+                    <span class="e-float-line"></span>
+                    <label class="e-float-text">Cuenta IBAN</label>
+                </div>
+            </div>
+            <p></p>
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Agregar" IsPrimary="true" OnClick="@AddCardIban" />
+        <DialogButton Content="Cancelar" IsPrimary="true" OnClick="@CloseAddCardIbanDialog" />
+    </DialogButtons>
+</SfDialog>
+
+@code {
+    [Parameter]
+    public string emailToRegister { get; set; } = string.Empty;
+    [Parameter]
+    public List<HasPaymentInfo> list { get; set; } = new ();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(emailToRegister))
+        {
+            List<HasPaymentInfo> list = await HasPaymentInfoService.getHasPaymentInfoByEmail(emailToRegister);
+            _cardPaymentInfoList = await CardPaymentInfoService.GetCardPaymentInfosByPaymentInfoIDAsync(list);
+            CardToolbarItems.Add(new ItemModel()
+            {
+                Text = AddButtonTitle,
+                TooltipText = "Agrega una cuenta IBAN y la asocia a una tarjeta",
+            });
+        }
+        else
+        {
+            string Email = await sessionStorage.GetItemAsync<string>("Email");
+            if (Email != null)
+            {
+                List<HasPaymentInfo> list = await HasPaymentInfoService.getHasPaymentInfoByEmail(Email);
+                _cardPaymentInfoList = await CardPaymentInfoService.GetCardPaymentInfosByPaymentInfoIDAsync(list);
+            }
+            CardToolbarItems.Add(new ItemModel()
+            {
+                Text = AddButtonTitle,
+                TooltipText = "Agrega una cuenta IBAN y la asocia a una tarjeta",
+            });
+        }
+
+    }
+
+    protected async void AddCardIban()
+    {
+        AddCardDialogVisible = false;
+        await AddCardInfoAndClose();
+        AddedCardIban = "";
+        StateHasChanged();
+    }
+
+    protected async Task AddCardInfoAndClose()
+    {
+        PaymentInfo? PaymentInfo = await PaymentInfoService.AddPaymentInfoAsync();
+        if (PaymentInfo != null)
+        {
+            CardPaymentMethod? cardPM = await CardPaymentMethodService.GetPaymentMethodByIdAsync(CARD);
+            await CardPaymentInfoGrid.AddRecord();
+            if (cardPM != null)
+            {
+                string AccountNumber = AddedCardIban; // TODO: Hacer la validacion correcta
+                CardPaymentInfo cardPI = new CardPaymentInfo(AccountNumber, PaymentInfo.ID, cardPM.Name);
+                await CardPaymentInfoService.AddPaymentInfoAsync(cardPI);
+                _cardPaymentInfoList = await CardPaymentInfoService.GetCardPaymentInfosAsync();
+                await CardPaymentMethodService.AddPaymentInfoToPaymentMethodAsync(cardPM, cardPI);
+            }
+        }
+    }
+} 

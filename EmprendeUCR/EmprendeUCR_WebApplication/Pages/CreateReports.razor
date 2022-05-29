@@ -1,0 +1,31 @@
+﻿@page "/createReports"
+@using Syncfusion.Blazor.Grids;
+@using EmprendeUCR_WebApplication.Data.Services.Reports
+@using EmprendeUCR_WebApplication.Data.Entities
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Inputs
+@inject CreateReportService CreateReport
+
+
+<SfDialog Width="300px" IsModal="true" @bind-Visible="@CreateReport.AddDialogVisible">
+    <DialogTemplates>
+        <Header> Crear nuevo reporte </Header>
+        <Content>
+            <SfTextBox ID="inVal" @bind-Value="@CreateReport.Title" Type="InputType.Text" Placeholder="Titulo del reporte" FloatLabelType='@FloatLabelType.Auto' @oninput="@CreateReport.ValidateTitle" />
+            <SfTextBox ID="inVal" @bind-Value="@CreateReport.Content" Type="InputType.Text" Placeholder="Especifique su reporte" FloatLabelType='@FloatLabelType.Auto' />
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Enviar reporte" IsPrimary="true" Disabled="@CreateReport.CreateReportDisabled" OnClick="@CreateReport.CreateReport" />
+        <DialogButton Content="Cancelar" OnClick="@CreateReport.CloseCreateReportDialog" />
+    </DialogButtons>
+</SfDialog>
+@code{
+
+    private void OpenCreateReportDialog()
+    {
+        CreateReport.OpenCreateReportDialog();
+    }
+
+}

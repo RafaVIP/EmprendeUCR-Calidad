@@ -1,0 +1,44 @@
+﻿@page "/admin"
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject NavigationManager NavigationManager
+
+
+@if (_isLoading)
+{
+    <p>Cargando</p>
+}
+else
+{
+
+    <h3>Notificaciones Actuales</h3>
+
+    <h5>Reportes Pendientes</h5>
+
+    <h5>Solicitudes de Categorías</h5>
+
+    <h5>Solicitudes de Administración</h5>
+}
+
+
+@code {
+    bool _isLoading = true;
+    protected override async Task OnInitializedAsync()
+    {
+        string Email = await sessionStorage.GetItemAsync<string>("Email");
+        int Type = await sessionStorage.GetItemAsync<int>("Type");
+
+        if (Email == null)
+        {
+            NavigationManager.NavigateTo("/Login");
+        }
+        if (Type != 3)
+        {
+            NavigationManager.NavigateTo("/Login");
+        }
+        else
+        {
+            _isLoading = false;
+        }
+
+    }
+}

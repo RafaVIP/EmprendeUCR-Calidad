@@ -1,0 +1,116 @@
+﻿@*Para esta actividad supervisada se va a trabajar en la historia de usuario
+    PIIB12021-336: Be able to add payment methods to my profile
+    Se van a trabajar las siguientes tareas:
+    Link the functionality to an interface
+    Check from an interface the available payment methods that the entrepreneurs
+    can add*@
+
+@page "/entrepreneur_payment_methods"
+@page "/entrepreneur_payment_methods/{emailToRegister}"
+
+@using EmprendeUCR.Application.PaymentInfos;
+@using EmprendeUCR.Domain.PaymentInfos.Entities;
+@using Microsoft.AspNetCore.WebUtilities;
+@inject IHasPaymentInfoService HasPaymentInfoService
+@inject NavigationManager NavigationManager
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+
+@if (_isLoading)
+{
+    <p>Cargando</p>
+}
+else
+{
+    <div class="grid-container">
+        <div class="grid-item">
+            <b>SINPE Móvil</b>
+            <EmprendeUCR.Presentation.Pages.PaymentInfos.SinpeMovil.SinpeMovilPaymentInfoEntrepreneur emailToRegister=@emailToRegister list=@list />
+        </div>
+        <div class="grid-item">
+            <b>SINPE IBAN</b>
+            <EmprendeUCR.Presentation.Pages.PaymentInfos.SinpeIban.SinpeIbanPaymentInfoEntrepreneur emailToRegister=@emailToRegister list=@list />
+        </div>
+        <div class="grid-item">
+            <b>Tarjetas</b>
+            <EmprendeUCR.Presentation.Pages.PaymentInfos.Card.CardPaymentInfoEntrepreneur emailToRegister=@emailToRegister list=@list />
+        </div>
+
+    </div>
+    <div class="my-3">
+        @if (!string.IsNullOrEmpty(@buttonMessage))
+        {
+            <center>
+                <button @onclick="finish" class="btn btn-primary marginButton">@buttonMessage</button>
+            </center>
+        }
+    </div>
+
+    <style>
+        .grid-container {
+            display: grid;
+            grid-template-columns: auto auto;
+            padding: 10px;
+            align-content: start;
+        }
+
+        .grid-item {
+            padding: 10px;
+        }
+    </style>
+}
+@code
+{
+    bool _isLoading = true;
+
+    [Parameter]
+    public string emailToRegister { get; set; } = string.Empty;
+    private string buttonMessage = string.Empty;
+
+    public string typeOfUser = string.Empty;
+
+    public List<HasPaymentInfo> list { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("email", out var parameter))
+        {
+            emailToRegister = parameter;
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("userType", out var parameter2))
+            {
+                typeOfUser = parameter2;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(emailToRegister))
+        {
+            buttonMessage = "Finalizar";
+            _isLoading = false;
+        }
+        else
+        {
+            string Email = await sessionStorage.GetItemAsync<string>("Email");
+            int Type = await sessionStorage.GetItemAsync<int>("Type");
+            list = await HasPaymentInfoService.getHasPaymentInfoByEmail(Email);
+
+            if (Email == null)
+            {
+                NavigationManager.NavigateTo("/Login");
+            }
+            if (Type != 2)
+            {
+                NavigationManager.NavigateTo("/Login");
+            }
+
+            else
+            {
+                _isLoading = false;
+            }
+        }
+    }
+
+    private void finish()
+    {
+        NavigationManager.NavigateTo("/messagePage?type=9&userType=" + typeOfUser);
+    }
+}
